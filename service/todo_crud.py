@@ -125,7 +125,7 @@ class TodoService:
     async def delete_todo(todo_id: str) -> Dict[str, Any]:
         """Delete a todo"""
         try:
-            result = supabase.table("todos").delete().eq("id", todo_id).execute()
+            result = supabase.table("todos").delete().eq("text", todo_id).execute()
             
             return {
                 "success": True,

@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.v1.todo_register import router as todo_router
 from api.v1.chat_interaction import router as chat_router
+from api.v1.vapi_webhook import router as vapi_router
 from agent import  get_user_agent, get_habit_coaching_agent
 
 load_dotenv()
@@ -15,7 +16,7 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # Add your frontend URL
+    allow_origins=["*"],  # Allow all origins for webhook access
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,6 +28,7 @@ app.add_middleware(
 # Include routers
 app.include_router(todo_router)
 app.include_router(chat_router)
+app.include_router(vapi_router)
 
 
 
@@ -105,16 +107,22 @@ async def delete_todo():
 if __name__ == "__main__":
     import uvicorn
     
-    print("🎯 HabitElevate - AI Agent Server with Twilio Voice Integration")
+    print("🎯 HabitElevate - AI Agent Server with VAPI Integration")
     print("=" * 60)
     print("🌐 Starting FastAPI server...")
     print("📍 Server will be available at:")
     print("   - API: http://localhost:8000")
     print("   - Docs: http://localhost:8000/docs")
-    print("   - Chat: POST http://localhost:8000/chat")
-    print("   - Twilio Voice: POST http://localhost:8000/api/v1/twilio/voice")
-    print("   - Twilio Status: GET http://localhost:8000/api/v1/twilio/status")
-    print("   - Make Call: POST http://localhost:8000/api/v1/twilio/call")
+    print("")
+    print("📞 VAPI Webhook Endpoints:")
+    print("   - Webhook: POST http://localhost:8000/api/v1/vapi/webhook")
+    print("   - Test: GET http://localhost:8000/api/v1/vapi/webhook/test")
+    print("")
+    print("🧪 To test VAPI integration:")
+    print("   1. Run: python test_vapi_webhook.py")
+    print("   2. Start ngrok: ngrok http 8000")
+    print("   3. Update VAPI Server URL with ngrok link")
+    print("=" * 60)
     
     uvicorn.run(
         "main:app", 
