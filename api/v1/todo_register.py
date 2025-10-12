@@ -8,6 +8,10 @@ router = APIRouter(prefix="/api/v1/todos", tags=["todos"])
 @router.post("/")
 async def create_todo(todo: TodoCreate):
     """Create a new todo"""
+    # Validate that user_id is provided
+    if not todo.user_id:
+        raise HTTPException(status_code=400, detail="user_id is required to create a todo")
+    
     result = await TodoService.create_todo(todo)
     
     if result["success"]:
@@ -22,6 +26,10 @@ async def create_todo(todo: TodoCreate):
 @router.get("/")
 async def get_todos(user_id: Optional[str] = Query(None, description="Filter todos by user ID")):
     """Get all todos, optionally filtered by user_id"""
+    # Make user_id required
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id is required to fetch todos")
+    
     result = await TodoService.get_todos(user_id)
     
     if result["success"]:
@@ -91,6 +99,10 @@ async def delete_todo(todo_id: str):
 @router.delete("/completed/clear")
 async def clear_completed_todos(user_id: Optional[str] = Query(None, description="Clear completed todos for specific user")):
     """Delete all completed todos"""
+    # Make user_id required
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id is required to clear completed todos")
+    
     result = await TodoService.clear_completed_todos(user_id)
     
     if result["success"]:

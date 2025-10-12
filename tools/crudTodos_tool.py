@@ -97,7 +97,7 @@ class crud_todos_tool(Toolkit):
                 "message": f"Error deleting todo: {str(e)}"
             })
 
-    async def update_todo(self, todo_id: str, text: str = None, completed: bool = None) -> str:
+    async def update_todo(self, todo_id: str, text: str , completed: bool ) -> str:
         """
         Update an existing todo with new information.
 

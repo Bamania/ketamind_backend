@@ -94,9 +94,12 @@ def get_additional_context(
     
     if user_id:
         context_parts.append(f"\n👤 CURRENT USER: {user_id}")
+        context_parts.append(f"\n⚠️ IMPORTANT: When using CRUD todo tools (create_todo, get_todos, clear_completed_todos), ALWAYS pass user_id='{user_id}' as a parameter.")
+        context_parts.append(f"\n📝 Example: create_todo(text='Complete task', user_id='{user_id}')")
     
     if user_preferences:
         context_parts.append(f"\n⚙️ USER PREFERENCES: {user_preferences}")
+    
     
     if session_context:
         context_parts.append(f"\n📋 SESSION CONTEXT: {session_context}")
