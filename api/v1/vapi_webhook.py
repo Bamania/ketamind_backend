@@ -143,8 +143,13 @@ async def vapi_add_todo_webhook(request: Request):
             results = []
             print("all the tools calls vapi did",tool_calls)
             for tool_call in tool_calls:
+                # Extract tool call ID
+                tool_call_id = tool_call.get("id")
+                print(f"Processing tool call ID: {tool_call_id}")
+                
                 function_info = tool_call.get("function", {})
                 function_name = function_info.get("name")
+            
                 
                 # Handle Add_todo function
                 if function_name == "Add_todo":
@@ -164,6 +169,7 @@ async def vapi_add_todo_webhook(request: Request):
                     
                     if not todo_text:
                         results.append({
+                            "toolCallId": tool_call_id,
                             "error": "Missing 'todo' parameter"
                         })
                         continue
@@ -180,11 +186,13 @@ async def vapi_add_todo_webhook(request: Request):
                     if result["success"]:
                         print(f"Successfully created todo: {todo_text} for user: {user_id}")
                         results.append({
+                            "toolCallId": tool_call_id,
                             "result": f"Successfully added todo: '{todo_text}' to your list!"
                         })
                     else:
                         logger.error(f"Failed to create todo: {result['message']}")
                         results.append({
+                            "toolCallId": tool_call_id,
                             "error": f"Failed to add todo: {result['message']}"
                         })
                 elif function_name == "Delete_todo":
@@ -204,6 +212,7 @@ async def vapi_add_todo_webhook(request: Request):
                     
                     if not todo_text:
                         results.append({
+                            "toolCallId": tool_call_id,
                             "error": "Missing 'todo' parameter"
                         })
                         continue
@@ -213,6 +222,7 @@ async def vapi_add_todo_webhook(request: Request):
                     
                     if not todos_result["success"]:
                         results.append({
+                            "toolCallId": tool_call_id,
                             "error": f"Failed to retrieve todos: {todos_result['message']}"
                         })
                         continue
@@ -228,6 +238,7 @@ async def vapi_add_todo_webhook(request: Request):
                     
                     if not matching_todo:
                         results.append({
+                            "toolCallId": tool_call_id,
                             "error": f"Could not find a todo matching '{todo_text}'"
                         })
                         continue
@@ -238,20 +249,23 @@ async def vapi_add_todo_webhook(request: Request):
                     if delete_result["success"]:
                         print(f"Successfully deleted todo: {matching_todo['text']} for user: {user_id}")
                         results.append({
+                            "toolCallId": tool_call_id,
                             "result": f"Successfully deleted todo: '{matching_todo['text']}'"
                         })
                     else:
                         logger.error(f"Failed to delete todo: {delete_result['message']}")
                         results.append({
+                            "toolCallId": tool_call_id,
                             "error": f"Failed to delete todo: {delete_result['message']}"
                         })
                 
                 elif function_name == "Read_todo":
                     # Get all todos for the user
                     todos_result = await TodoService.get_todos(user_id)
-                    
+                    print("todos_result",todos_result)
                     if not todos_result["success"]:
                         results.append({
+                            "toolCallId": tool_call_id,
                             "error": f"Failed to retrieve todos: {todos_result['message']}"
                         })
                         continue
@@ -260,6 +274,7 @@ async def vapi_add_todo_webhook(request: Request):
                     
                     if not todos or len(todos) == 0:
                         results.append({
+                            "toolCallId": tool_call_id,
                             "result": "You don't have any todos yet. Your list is empty!"
                         })
                         continue
@@ -286,16 +301,18 @@ async def vapi_add_todo_webhook(request: Request):
                     result_text = "\n".join(response_parts)
                     print(f"Successfully retrieved {len(todos)} todos for user: {user_id}")
                     results.append({
+                        "toolCallId": tool_call_id,
                         "result": result_text
                     })
                 
                 else:
                     results.append({
+                        "toolCallId": tool_call_id,
                         "error": f"Unknown function: {function_name}"
                     })
             
+            # Return all results with their corresponding tool call IDs
             return {"results": results}
-        
         else:
             # Handle other message types if needed
             print(f"Received non-tool-call message type: {message_type}")
