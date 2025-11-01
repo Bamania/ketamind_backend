@@ -4,7 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.v1.todo_register import router as todo_router
 from api.v1.chat_interaction import router as chat_router
 from api.v1.vapi_webhook import router as vapi_router
-from agent import  get_user_agent, get_habit_coaching_agent
+from api.v1.goal_plan_generation import router as goal_plan_router
+from agent import  get_user_agent
 
 load_dotenv()
 app = FastAPI(
@@ -29,6 +30,7 @@ app.add_middleware(
 app.include_router(todo_router)
 app.include_router(chat_router)
 app.include_router(vapi_router)
+app.include_router(goal_plan_router)
 
 
 
@@ -46,16 +48,6 @@ async def chat_endpoint(message: str, user_id: str = None):
     except Exception as e:
         return {"error": str(e)}
 
-
-@app.post("/chat/habit-coaching")
-async def habit_coaching_endpoint(message: str, habit_focus: str, user_id: str = None):
-    """Habit coaching endpoint with specific habit focus"""
-    try:
-        agent = get_habit_coaching_agent(habit_focus, user_id)
-        response = await agent.arun(message)
-        return {"response": response.content}
-    except Exception as e:
-        return {"error": str(e)}
 
 @app.get("/test-call")
 async def test_call():

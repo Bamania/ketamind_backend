@@ -4,7 +4,10 @@ HabitElevate AI Agent Configuration
 This module provides a centralized agent configuration for the HabitElevate application.
 It exports a configurable agent instance that can be used throughout the application.
 """
-
+from agno.memory.v2.db.postgres import PostgresMemoryDb
+from agno.storage.postgres import PostgresStorage
+from agno.memory.v2.memory import Memory
+# from agno.memory.v2.memory import UserMemory
 import os
 from agno.app.agui.app import AGUIApp
 import logging
@@ -12,8 +15,9 @@ from typing import Optional, Dict, Any
 from dotenv import load_dotenv
 from agno.agent import Agent
 from agno.models.google import Gemini
-from agno.storage.postgres import PostgresStorage
-
+# from agno.storage.postgres import PostgresStorage
+# from agno.storage.postgres import PostgresMemoryDb
+# from agno.memory.memory import Memory
 # Import tools
 from tools.calling_tool import CallingTool
 from tools.crudTodos_tool import crud_todos_tool
@@ -26,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 # Default configuration
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gemini-1.5-flash")
-POSTGRES_DB_URL = os.getenv("POSTGRES_DB_URL")
+POSTGRES_DB_URL = os.getenv("POSTGRES_AGNO_DB_URL")
 
 def load_system_instructions() -> str:
     """
@@ -49,28 +53,35 @@ def load_system_instructions() -> str:
 SYSTEM_INSTRUCTIONS = load_system_instructions()
 
 
-def get_storage() -> Optional[PostgresStorage]:
-    """
-    Create storage for conversation persistence.
-    
-    Returns:
-        PostgresStorage instance or None if connection fails
-    """
-    if not POSTGRES_DB_URL:
-        logger.warning("No POSTGRES_DB_URL provided, continuing without persistent storage")
-        return None
-        
+
+def get_storage():
+    """Initialize global storage and memory instances"""
     try:
-        return PostgresStorage(
+        storage = PostgresStorage(
             db_url=POSTGRES_DB_URL,
-            table_name="habit_elevate_sessions",
+            table_name="agent_sessions",
             schema="public",
         )
+        
+      
+        memory_db = PostgresMemoryDb(
+            db_url=POSTGRES_DB_URL,
+            table_name="agno_memories",
+            schema="public",
+        )
+        
+        '''try:
+            memory_db.create()
+        except Exception as create_error:
+            logger.warning(f"Memory table already exists or creation failed: {create_error}")'''
+
+        memory = Memory(db=memory_db)
+
+        return storage, memory
     except Exception as e:
         logger.warning(f"Could not connect to database: {e}")
         logger.info("Continuing without persistent storage...")
-        return None
-
+        return None, None
 
 def get_additional_context(
     user_id: Optional[str] = None,
@@ -113,7 +124,7 @@ def get_additional_context(
 # this function is about to build the agent instace with your rules and tools
 def get_agent(
     model_name: Optional[str] = None,
-    user_id: Optional[str] = None,
+    user_id: str = None,
     user_preferences: Optional[Dict[str, Any]] = None,
     session_context: Optional[str] = None,
     habit_focus: Optional[str] = None,
@@ -152,17 +163,15 @@ def get_agent(
     logger.info(f"Using model: {model_id}")
     
     # Initialize model with simple Gemini configuration
-    model_kwargs = {"id": model_id}
-    
     # Use simple Gemini model (no Vertex AI)
     logger.info(f"Using simple Gemini model: {model_id}")
     
-    model = Gemini(**model_kwargs)
+    model = Gemini(id=model_id)
     
     # Get storage if enabled
     storage = None
     if enable_storage:
-        storage = get_storage()
+        storage, memory = get_storage()
     
     # Get additional context
     additional_context = get_additional_context(
@@ -187,6 +196,8 @@ def get_agent(
         model=model,
         agent_id="habit-elevate-agent",
         name="HabitElevate AI Assistant",
+        session_id=user_id,
+        memory=memory,
         instructions=full_instructions,
         tools=tools,
         tool_choice={"type": "function", "function": {"name": tool_choice}} if tool_choice else None,
@@ -233,39 +244,6 @@ def get_user_agent(user_id: str, preferences: Optional[Dict[str, Any]] = None) -
     )
 
 
-def get_habit_coaching_agent(habit_focus: str, user_id: Optional[str] = None) -> Agent:
-    """
-    Get an agent instance focused on specific habit coaching.
-    
-    Args:
-        habit_focus: Specific habit area to focus on
-        user_id: Optional user ID
-        
-    Returns:
-        Habit coaching focused Agent instance
-    """
-    return get_agent(
-        user_id=user_id,
-        habit_focus=habit_focus,
-        enable_storage=True
-    )
-
-
-def get_debug_agent() -> Agent:
-    """
-    Get an agent instance with debug mode enabled.
-    
-    Returns:
-        Debug-enabled Agent instance
-    """
-    return get_agent(
-        debug_mode=True,
-        show_tool_calls=True,
-        enable_storage=False
-    )
-
-
-# Export commonly used agent instances
 
 agui_app = AGUIApp(
     agent=get_default_agent(),

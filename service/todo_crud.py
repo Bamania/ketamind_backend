@@ -1,7 +1,7 @@
-from typing import List, Optional, Dict, Any
+from typing import Optional, Dict, Any
 from datetime import datetime
 from database.supabaseClient import supabase
-from models import TodoCreate, TodoUpdate, TodoResponse
+from models import TodoCreate, TodoUpdate
 
 class TodoService:
     @staticmethod
@@ -125,7 +125,7 @@ class TodoService:
     async def delete_todo(todo_id: str) -> Dict[str, Any]:
         """Delete a todo"""
         try:
-            result = supabase.table("todos").delete().eq("text", todo_id).execute()
+            result = supabase.table("todos").delete().eq("id", todo_id).execute()
             
             return {
                 "success": True,

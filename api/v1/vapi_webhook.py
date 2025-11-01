@@ -9,7 +9,6 @@ from pydantic import BaseModel
 from typing import Optional, Dict, Any
 import logging
 import uuid
-import hashlib
 from service.todo_crud import TodoService
 from models import TodoCreate
 
@@ -66,17 +65,65 @@ async def vapi_add_todo_webhook(request: Request):
         payload = await request.json()
         print(f"Received VAPI webhook request: {payload}")
         
+        
         # Extract the message and call information
         message = payload.get("message", {})
-        call_info = payload.get("call", {})
         
+        # phone_number = (
+        #     payload.get("call", {})
+        #         .get("customer", {})
+        #         .get("number")
+        # ) or (
+        #     payload.get("customer", {})
+        #         .get("number")
+        # ) or call_info.get("id", "unknown_user")
+
+        # print("PHONE NUMBER ---->>>>",phone_number)
+        phone_number = (
+            payload.get("message", {})
+                .get("call", {})
+                .get("customer", {})
+                .get("number")
+        ) or (
+            payload.get("call", {})
+                .get("customer", {})
+                .get("number")
+        ) or "unknown_user"
         
-        customer = call_info.get("customer", {})
-        phone_number = customer.get("number") or call_info.get("id", "unknown_user")
+        print("PHONE NUMBER ---->>>>", phone_number)
         
-        # Convert phone number to UUID for database compatibility
-        user_id = phone_to_uuid(phone_number) if phone_number != "unknown_user" else str(uuid.uuid4())
-        print(f"Phone: {phone_number} -> UUID: {user_id}")
+        # Query users_profile table to get the actual user_id using phone number
+        if phone_number and phone_number != "unknown_user":
+            from database.supabaseClient import supabase
+            
+            try:
+                # Query users_profile table for user with matching phone number
+                result = supabase.table("users_profile").select("id").eq("phone", phone_number).execute()
+                
+                if result.data and len(result.data) > 0:
+                    user_id = result.data[0]["id"]
+                    print(f"Found user in database - Phone: {phone_number} -> User ID: {user_id}")
+                else:
+                    logger.warning(f"No user found with phone number: {phone_number}")
+                    return {
+                        "results": [{
+                            "error": f"No user account found for phone number {phone_number}. Please sign up first."
+                        }]
+                    }
+            except Exception as db_error:
+                logger.error(f"Database error while fetching user: {str(db_error)}")
+                return {
+                    "results": [{
+                        "error": "Failed to authenticate user. Please try again."
+                    }]
+                }
+        else:
+            logger.error("No phone number found in webhook payload")
+            return {
+                "results": [{
+                    "error": "Could not identify caller. Please try again."
+                }]
+            }
         
         # Check if this is a tool call
         message_type = message.get("type")
@@ -127,7 +174,7 @@ async def vapi_add_todo_webhook(request: Request):
                         text=todo_text,
                         user_id=str(user_id)
                     )
-                    
+                    # need to add userId somehow in the todo_data !
                     result = await TodoService.create_todo(todo_data)
                     
                     if result["success"]:
@@ -140,37 +187,108 @@ async def vapi_add_todo_webhook(request: Request):
                         results.append({
                             "error": f"Failed to add todo: {result['message']}"
                         })
-                elif function_name== "Delete_todo":
-                    
+                elif function_name == "Delete_todo":
+                    # Parse arguments
+                    import json
                     arguments_raw = function_info.get("arguments", "{}")
-                    print("args vapi sent",arguments_raw)
-                    print("type of args vapi sent",type(arguments_raw))
-                    arguments = arguments_raw
+                    print("Delete_todo args:", arguments_raw)
+                    print("Type of args:", type(arguments_raw))
+                    
+                    # Check if arguments is already a dict or needs parsing
+                    if isinstance(arguments_raw, str):
+                        arguments = json.loads(arguments_raw)
+                    else:
+                        arguments = arguments_raw
+                    
                     todo_text = arguments.get("todo")
-                    # check if the todo is in the argument
+                    
                     if not todo_text:
                         results.append({
                             "error": "Missing 'todo' parameter"
                         })
                         continue
-                    todo_data = TodoCreate(   #using the same modal as create to delete the todo !
-                        text=todo_text,
-                        user_id=str(user_id)
-                    )        
-                    result = await TodoService.get_todos(user_id)
-                    todo_tobeDeleted = todo_text in result
                     
-                    if result["success"]:
-                        print(f"Successfully created todo: {todo_text} for user: {user_id}")
+                    # Get all user's todos to find the matching one
+                    todos_result = await TodoService.get_todos(user_id)
+                    
+                    if not todos_result["success"]:
                         results.append({
-                            "result": f"Successfully added todo: '{todo_text}' to your list!"
+                            "error": f"Failed to retrieve todos: {todos_result['message']}"
+                        })
+                        continue
+                    
+                    # Find the todo that matches the text (case-insensitive partial match)
+                    matching_todo = None
+                    todo_text_lower = todo_text.lower()
+                    
+                    for todo in todos_result["data"]:
+                        if todo_text_lower in todo["text"].lower():
+                            matching_todo = todo
+                            break
+                    
+                    if not matching_todo:
+                        results.append({
+                            "error": f"Could not find a todo matching '{todo_text}'"
+                        })
+                        continue
+                    
+                    # Delete the todo using the ID
+                    delete_result = await TodoService.delete_todo(matching_todo["id"])
+                    
+                    if delete_result["success"]:
+                        print(f"Successfully deleted todo: {matching_todo['text']} for user: {user_id}")
+                        results.append({
+                            "result": f"Successfully deleted todo: '{matching_todo['text']}'"
                         })
                     else:
-                        logger.error(f"Failed to create todo: {result['message']}")
+                        logger.error(f"Failed to delete todo: {delete_result['message']}")
                         results.append({
-                            "error": f"Failed to add todo: {result['message']}"
+                            "error": f"Failed to delete todo: {delete_result['message']}"
                         })
-
+                
+                elif function_name == "Read_todo":
+                    # Get all todos for the user
+                    todos_result = await TodoService.get_todos(user_id)
+                    
+                    if not todos_result["success"]:
+                        results.append({
+                            "error": f"Failed to retrieve todos: {todos_result['message']}"
+                        })
+                        continue
+                    
+                    todos = todos_result["data"]
+                    
+                    if not todos or len(todos) == 0:
+                        results.append({
+                            "result": "You don't have any todos yet. Your list is empty!"
+                        })
+                        continue
+                    
+                    # Format todos into a readable string
+                    # Separate completed and pending todos
+                    pending_todos = [t for t in todos if not t.get("completed", False)]
+                    completed_todos = [t for t in todos if t.get("completed", False)]
+                    
+                    response_parts = []
+                    
+                    if pending_todos:
+                        response_parts.append(f"You have {len(pending_todos)} pending todo{'s' if len(pending_todos) != 1 else ''}:")
+                        for idx, todo in enumerate(pending_todos, 1):
+                            response_parts.append(f"{idx}. {todo['text']}")
+                    
+                    if completed_todos:
+                        if pending_todos:
+                            response_parts.append("")  # Add spacing
+                        response_parts.append(f"You have {len(completed_todos)} completed todo{'s' if len(completed_todos) != 1 else ''}:")
+                        for idx, todo in enumerate(completed_todos, 1):
+                            response_parts.append(f"{idx}. {todo['text']} ✓")
+                    
+                    result_text = "\n".join(response_parts)
+                    print(f"Successfully retrieved {len(todos)} todos for user: {user_id}")
+                    results.append({
+                        "result": result_text
+                    })
+                
                 else:
                     results.append({
                         "error": f"Unknown function: {function_name}"
