@@ -5,6 +5,7 @@ from api.v1.todo_register import router as todo_router
 from api.v1.chat_interaction import router as chat_router
 from api.v1.vapi_webhook import router as vapi_router
 from api.v1.goal_plan_generation import router as goal_plan_router
+from api.v1.schedule_call import router as schedule_call_router
 from agent import  get_user_agent
 
 load_dotenv()
@@ -31,7 +32,7 @@ app.include_router(todo_router)
 app.include_router(chat_router)
 app.include_router(vapi_router)
 app.include_router(goal_plan_router)
-
+app.include_router(schedule_call_router)
 
 
 @app.post("/testChat")

@@ -17,4 +17,5 @@ dependencies = [
     "supabase>=2.18.1",
     "twilio>=9.7.1",
     "vapi-server-sdk>=1.7.0",
+    "apscheduler>=3.10.4",
 ]

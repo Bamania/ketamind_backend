@@ -15,15 +15,18 @@ class CallingTool(Toolkit):
     def __init__(self, **kwargs):
         super().__init__(name="CallingTool", tools=[self.call_phone_number], **kwargs)
 
-    def call_phone_number(self, phone_number: str) -> str:
+    def call_phone_number(self, phone_number: str,user_id: str) -> str:
         """
         Use this Function to call a phone number.If phoneNumber has no +91 in the start it will add it automatically
 
         Args:
-            phone_number (str): The phone number to call
+            phone_number (str): The phone number to call (with +91 prefix if not present)
+            user_id (str): The user id of the user Whose phone number is being called
         Returns:
             str: The call SID or error message
         """
+
+        # Query users_profile table to get the actual user_id using phone number
         call = vapi.calls.create(
             phone_number_id=os.getenv("VAPI_PHONE_NUMBER_ID"),
             customer={"number": phone_number},
