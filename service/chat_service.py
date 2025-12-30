@@ -8,16 +8,13 @@ import asyncio
 logger = logging.getLogger(__name__)
 
 
-async def generate_agui_streaming_response(message: str, user_id: Optional[str] = None) -> AsyncGenerator[str, None]:
+async def generate_agui_streaming_response(message: str, user_id: str) -> AsyncGenerator[str, None]:
     """Generate streaming response using AGUI agent with inline UI components"""
     try:
-        logger.info(f"Generating AGUI streaming response for message: {message} and user_id: {user_id}")
+        print(f"Generating AGUI streaming response for message: {message} and user_id: {user_id}")
         
         # Use the agent directly to generate response
-        if user_id:
-            agent = get_user_agent(user_id)
-        # else:
-        #     agent = get_default_agent()
+        agent=get_user_agent(user_id)
         
         response = await agent.arun(message)
         
