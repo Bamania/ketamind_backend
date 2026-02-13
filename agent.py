@@ -108,7 +108,6 @@ def get_agent(
         # show_tool_calls=show_tool_calls,
         debug_mode=debug_mode,
         # monitoring=True,
-        stream_intermediate_steps=False,
         add_history_to_context=True,  # Renamed from add_history_to_messages
         num_history_runs=10,
         # add_datetime_to_instructions=True,
