@@ -36,7 +36,7 @@ def load_system_instructions() -> str:
 SYSTEM_INSTRUCTIONS = load_system_instructions()
 
 def get_db():
-    """Initialize database instance (v2 style)"""
+    """Initialize database instance"""
     try:
         db = PostgresDb(
             db_url=POSTGRES_DB_URL,
@@ -95,12 +95,12 @@ def get_agent(
     
     agent = Agent(
         model=model,
-        # agent_id="habit-elevate-agent",
+        id="habit-elevate-agent",
         name="HabitElevate AI Assistant",
-        session_id=user_id,
+        user_id=user_id,
         db=db,  # Changed from storage=storage
         enable_user_memories=True,  # Replaces memory=memory
-        enable_agentic_memory=True,
+        # enable_agentic_memory=True,
         instructions=full_instructions,
         tools=tools,
         tool_choice={"type": "function", "function": {"name": tool_choice}} if tool_choice else None,
