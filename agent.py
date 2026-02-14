@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gemini-2.5-flash")
 POSTGRES_DB_URL = os.getenv("POSTGRES_AGNO_DB_URL")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 def load_system_instructions() -> str:
     try:
@@ -79,7 +80,7 @@ def get_agent(
     show_tool_calls: bool = True
 ) -> Agent:
     model_id = model_name.split("/")[-1] if model_name and "/" in model_name else (model_name or DEFAULT_MODEL)
-    model = Gemini(id=model_id)
+    model = Gemini(id=model_id, api_key=GOOGLE_API_KEY)
     
     db = get_db() if enable_storage else None
     
