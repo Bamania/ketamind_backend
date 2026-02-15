@@ -19,7 +19,7 @@ from tools.getcalltranscript_tool import GetCallTranscriptTool
 load_dotenv()
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gemini-2.5-flash")
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gemini-flash-latest")
 POSTGRES_DB_URL = os.getenv("POSTGRES_AGNO_DB_URL")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
